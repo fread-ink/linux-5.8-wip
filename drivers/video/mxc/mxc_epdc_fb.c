@@ -247,13 +247,13 @@ static int mxc_epdc_debugging = 0;
 atomic_t mxc_clear_queue = ATOMIC_INIT(0);
 
 #ifdef MODULE
-module_param_named(dont_register_fb, dont_register_fb, int, S_IRUGO);
+module_param_named(dont_register_fb, dont_register_fb, int, 0444);
 MODULE_PARM_DESC(dont_register_fb, "non-zero to not register");
-module_param_named(default_panel_hw_init, default_panel_hw_init, int, S_IRUGO);
+module_param_named(default_panel_hw_init, default_panel_hw_init, int, 0444);
 MODULE_PARM_DESC(default_panel_hw_init, "Default hardware initialization");
-module_param_named(default_update_mode, default_update_mode, int, S_IRUGO);
+module_param_named(default_update_mode, default_update_mode, int, 0444);
 MODULE_PARM_DESC(default_update_mode, "Default update mode");
-module_param_named(waveform_to_use, wf_to_use, charp, S_IRUGO);
+module_param_named(waveform_to_use, wf_to_use, charp, 0444);
 MODULE_PARM_DESC(waveform_to_use, "/path/to/waveform_file or built-in");
 #endif
 
@@ -1029,7 +1029,7 @@ static int mxc_epdc_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	/* make buffers bufferable */
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
-	vma->vm_flags |= VM_IO | VM_RESERVED;
+	vma->vm_flags |= VM_IO | VM_DONTEXPAND | VM_DONTDUMP;
 
 	if (remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
 			    vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
@@ -2328,6 +2328,7 @@ static void mxc_epdc_dump_fb(struct mxcfb_update_data *upd_data, struct mxc_epdc
 	}
 }
 
+/*
 static long long timeofday_msec(void)
 {
         struct timeval tv;
@@ -2335,6 +2336,7 @@ static long long timeofday_msec(void)
         do_gettimeofday(&tv);
         return (long long)tv.tv_sec*1000 + tv.tv_usec/1000;
 }
+*/
 
 int mxc_epdc_fb_send_update(struct mxcfb_update_data *upd_data,
 				   struct fb_info *info)
@@ -2483,9 +2485,9 @@ int mxc_epdc_fb_send_update(struct mxcfb_update_data *upd_data,
 			&fb_data->full_marker_list);
 
 		if (mxc_epdc_debugging) {
-			marker_data->start_time = timeofday_msec();
-			printk(KERN_INFO "mxc_epdc: update start marker=%d, start time=%lld\n",
-					marker_data->update_marker, marker_data->start_time);
+      //			marker_data->start_time = timeofday_msec();
+      //			printk(KERN_INFO "mxc_epdc: update start marker=%d, start time=%lld\n",
+      //					marker_data->update_marker, marker_data->start_time);
 			printk(KERN_INFO "mxc_epdc: waveform: 0x%x update_mode: 0x%x update region top=%d, left=%d, width=%d, heigth=%d\n", upd_data->waveform_mode, upd_data->update_mode, upd_data->update_region.top, upd_data->update_region.left, upd_data->update_region.width, upd_data->update_region.height);
 		}
 	}
@@ -2858,7 +2860,7 @@ static void mxc_epdc_fb_update_pages(struct mxc_epdc_fb_data *fb_data,
 	struct mxcfb_update_data update;
 
   
-	cancel_rearming_delayed_work(&ff_work);
+	cancel_delayed_work_sync(&ff_work);
 
 	/* Do partial screen update, Update full horizontal lines */
 	update.update_region.left = 0;
@@ -3201,9 +3203,9 @@ static irqreturn_t mxc_epdc_irq_handler(int irq, void *dev_id)
 
 				if (mxc_epdc_debugging &&
 					(next_marker->update_marker != 0) ) {
-                                        long long end_time = timeofday_msec();
-                                        printk(KERN_INFO "mxc_epdc: update end marker=%u, end time=%lld, time taken=%lld ms\n",
-                                                next_marker->update_marker, end_time, end_time - next_marker->start_time);
+          //                                        long long end_time = timeofday_msec();
+          //                                        printk(KERN_INFO "mxc_epdc: update end marker=%u, end time=%lld, time taken=%lld ms\n",
+          //                                                next_marker->update_marker, end_time, end_time - next_marker->start_time);
 				}
 
 				if (next_marker->waiting)
@@ -3665,7 +3667,7 @@ static ssize_t store_update(struct device *device,
 }
 
 static struct device_attribute fb_attrs[] = {
-	__ATTR(update, S_IRUGO|S_IWUSR, NULL, store_update),
+	__ATTR(update, 0644, NULL, store_update),
 };
 
 static ssize_t mxc_epdc_pwrdown_show(struct device *dev, struct device_attribute *attr,
@@ -3692,7 +3694,7 @@ static ssize_t mxc_epdc_pwrdown_store(struct device *dev, struct device_attribut
 
 	return size;
 }
-static DEVICE_ATTR(mxc_epdc_pwrdown, 0666, mxc_epdc_pwrdown_show, mxc_epdc_pwrdown_store);
+static DEVICE_ATTR(mxc_epdc_pwrdown, 0664, mxc_epdc_pwrdown_show, mxc_epdc_pwrdown_store);
 
 extern void gpio_epdc_pins_enable(int enable);
 
@@ -3703,7 +3705,7 @@ static ssize_t mxc_epdc_force_powerup_store(struct device *dev, struct device_at
 	epdc_force_powerup();
 	return size;
 }
-static DEVICE_ATTR(mxc_epdc_force_powerup, 0666, NULL, mxc_epdc_force_powerup_store);
+static DEVICE_ATTR(mxc_epdc_force_powerup, 0664, NULL, mxc_epdc_force_powerup_store);
 
 static ssize_t mxc_epdc_powerup_show(struct device *dev, struct device_attribute *attr,
 				char *buf)
@@ -3736,7 +3738,7 @@ static ssize_t mxc_epdc_powerup_store(struct device *dev, struct device_attribut
 
 	return size;
 }
-static DEVICE_ATTR(mxc_epdc_powerup, 0666, mxc_epdc_powerup_show, mxc_epdc_powerup_store);
+static DEVICE_ATTR(mxc_epdc_powerup, 0664, mxc_epdc_powerup_show, mxc_epdc_powerup_store);
 
 static ssize_t mxc_epdc_update_store(struct device *device,
 				struct device_attribute *attr,
@@ -3775,7 +3777,7 @@ static ssize_t mxc_epdc_update_show(struct device *dev, struct device_attribute 
 {
 	return sprintf(buf, "1\n");
 }
-static DEVICE_ATTR(mxc_epdc_update, 0666, mxc_epdc_update_show, mxc_epdc_update_store);
+static DEVICE_ATTR(mxc_epdc_update, 0664, mxc_epdc_update_show, mxc_epdc_update_store);
 
 static ssize_t mxc_epdc_debug_show(struct device *dev, struct device_attribute *attr,
 				char *buf)
@@ -3797,7 +3799,7 @@ static ssize_t mxc_epdc_debug_store(struct device *dev, struct device_attribute 
 	return size;
 }
 
-static DEVICE_ATTR(mxc_epdc_debug, 0666, mxc_epdc_debug_show, mxc_epdc_debug_store);
+static DEVICE_ATTR(mxc_epdc_debug, 0664, mxc_epdc_debug_show, mxc_epdc_debug_store);
 
 
 #include "mxc_epdc_fb_lab126.c"
@@ -3935,7 +3937,7 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 	}
 
 	/* Allocate FB memory */
-	info->screen_base = dma_alloc_writecombine(&pdev->dev,
+	info->screen_base = dma_alloc_wc(&pdev->dev,
 						  fb_data->map_size,
 						  &fb_data->phys_start,
 						  GFP_DMA);
@@ -4378,7 +4380,7 @@ out_dmaengine:
 out_irq:
 	free_irq(fb_data->epdc_irq, fb_data);
 out_dma_work_buf:
-	dma_free_writecombine(&pdev->dev, fb_data->working_buffer_size,
+	dma_free_wc(&pdev->dev, fb_data->working_buffer_size,
 		fb_data->working_buffer_virt, fb_data->working_buffer_phys);
 	if (fb_data->pdata->put_pins)
 		fb_data->pdata->put_pins();
@@ -4386,16 +4388,16 @@ out_upd_buffers:
 	list_for_each_entry_safe(plist, temp_list, &fb_data->upd_buf_free_list,
 			list) {
 		list_del(&plist->list);
-		dma_free_writecombine(&pdev->dev, plist->size,
+		dma_free_wc(&pdev->dev, plist->size,
 				      plist->virt_addr,
 				      plist->phys_addr);
-		dma_free_writecombine(&pdev->dev, plist->size*2,
+		dma_free_wc(&pdev->dev, plist->size*2,
 				      plist->virt_addr_copybuf,
 				      plist->phys_addr_copybuf);
 		kfree(plist);
 	}
 out_dma_fb:
-	dma_free_writecombine(&pdev->dev, fb_data->map_size, info->screen_base,
+	dma_free_wc(&pdev->dev, fb_data->map_size, info->screen_base,
 			      fb_data->phys_start);
 
 out_mapregs:
@@ -4413,11 +4415,11 @@ static int mxc_epdc_fb_remove(struct platform_device *pdev)
 	struct mxc_epdc_fb_data *fb_data = platform_get_drvdata(pdev);
 	struct fb_info *info = &fb_data->info; /* Lab126 */
 
-	cancel_rearming_delayed_work(&ff_work);
+	cancel_delayed_work_sync(&ff_work);
 	
 	mxc_epdc_fb_blank(FB_BLANK_POWERDOWN, &fb_data->info);
 
-	cancel_rearming_delayed_work(&fb_data->epdc_done_work);
+	cancel_delayed_work_sync(&fb_data->epdc_done_work);
 
 	/* Lab126 */
 	device_remove_file(info->dev, &fb_attrs[0]);
@@ -4437,26 +4439,26 @@ static int mxc_epdc_fb_remove(struct platform_device *pdev)
 	}
 	free_irq(fb_data->epdc_irq, fb_data);
 
-	dma_free_writecombine(&pdev->dev, fb_data->working_buffer_size,
+	dma_free_wc(&pdev->dev, fb_data->working_buffer_size,
 				fb_data->working_buffer_virt,
 				fb_data->working_buffer_phys);
 	if (fb_data->waveform_buffer_virt != NULL)
-		dma_free_writecombine(&pdev->dev, fb_data->waveform_buffer_size,
+		dma_free_wc(&pdev->dev, fb_data->waveform_buffer_size,
 				fb_data->waveform_buffer_virt,
 				fb_data->waveform_buffer_phys);
 	list_for_each_entry_safe(plist, temp_list, &fb_data->upd_buf_free_list,
 			list) {
 		list_del(&plist->list);
-		dma_free_writecombine(&pdev->dev, plist->size,
+		dma_free_wc(&pdev->dev, plist->size,
 				      plist->virt_addr,
 				      plist->phys_addr);
-		dma_free_writecombine(&pdev->dev, plist->size*2,
+		dma_free_wc(&pdev->dev, plist->size*2,
 				      plist->virt_addr_copybuf,
 				      plist->phys_addr_copybuf);
 		kfree(plist);
 	}
 
-	dma_free_writecombine(&pdev->dev, fb_data->map_size, fb_data->info.screen_base,
+	dma_free_wc(&pdev->dev, fb_data->map_size, fb_data->info.screen_base,
 			      fb_data->phys_start);
 
 	if (fb_data->pdata->put_pins)
